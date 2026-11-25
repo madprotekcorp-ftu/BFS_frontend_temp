@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://www.example.com/</loc><lastmod>2026-11-25</lastmod><priority>1.0</priority></url>
+  <url><loc>https://www.example.com/about</loc><lastmod>2026-11-25</lastmod><priority>0.6</priority></url>
+  <url><loc>https://www.example.com/services</loc><lastmod>2026-11-25</lastmod><priority>0.6</priority></url>
+  <url><loc>https://www.example.com/emi-calculator</loc><lastmod>2026-11-25</lastmod><priority>0.6</priority></url>
+  <url><loc>https://www.example.com/contact</loc><lastmod>2026-11-25</lastmod><priority>0.6</priority></url>
+  <url><loc>https://www.example.com/privacy-policy</loc><lastmod>2026-11-25</lastmod><priority>0.6</priority></url>
+  <url><loc>https://www.example.com/services/personal-loan</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+  <url><loc>https://www.example.com/services/business-loan</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+  <url><loc>https://www.example.com/services/home-loan</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+  <url><loc>https://www.example.com/services/plot-loan</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+  <url><loc>https://www.example.com/services/car-loan</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+  <url><loc>https://www.example.com/services/commercial-vehicle-loan</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+  <url><loc>https://www.example.com/services/education-loan</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+  <url><loc>https://www.example.com/services/gold-loan</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+  <url><loc>https://www.example.com/services/msme-loan</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+  <url><loc>https://www.example.com/services/top-up-loan</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+  <url><loc>https://www.example.com/services/life-insurance</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+  <url><loc>https://www.example.com/services/health-insurance</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+  <url><loc>https://www.example.com/services/vehicle-insurance</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+  <url><loc>https://www.example.com/services/home-insurance</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+  <url><loc>https://www.example.com/services/personal-accident-insurance</loc><lastmod>2026-11-25</lastmod><priority>0.8</priority></url>
+</urlset>

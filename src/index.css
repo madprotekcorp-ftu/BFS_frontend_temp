@@ -1,0 +1,245 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-navy-950: #041a3d;
+  --color-navy-900: #082d65;
+  --color-navy-800: #0c3a7d;
+  --color-navy-700: #0f4a96;
+  --color-royal-600: #0755a5;
+  --color-royal-500: #1a6bc0;
+  --color-royal-100: #dbe8f7;
+  --color-royal-50: #eef4fb;
+  --color-gold-600: #d99a12;
+  --color-gold-500: #f5b82e;
+  --color-gold-400: #f8c95a;
+  --color-gold-100: #fdf1d4;
+  --color-gold-50: #fef8ea;
+  --color-surface: #f5f7fa;
+  --color-ink-900: #0f1b2d;
+  --color-ink-700: #33415c;
+  --color-ink-500: #5b6b85;
+  --color-ink-400: #8392aa;
+  --color-line: #e3e8f0;
+
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Manrope Variable', 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-card: 0 1px 2px rgb(8 45 101 / 0.04), 0 4px 16px rgb(8 45 101 / 0.06);
+  --shadow-lift: 0 2px 4px rgb(8 45 101 / 0.05), 0 16px 40px rgb(8 45 101 / 0.12);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-white font-sans text-ink-700;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight text-ink-900;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-royal-600;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+/* ---------- Gradient motion backgrounds ---------- */
+@keyframes gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+@keyframes orb-drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(8%, -10%, 0) scale(1.12);
+  }
+  66% {
+    transform: translate3d(-6%, 6%, 0) scale(0.94);
+  }
+}
+@keyframes orb-drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-12%, 8%, 0) scale(1.15);
+  }
+}
+@keyframes line-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes grid-pan {
+  to {
+    background-position: 56px 56px;
+  }
+}
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(1.8);
+  }
+}
+
+@utility bg-motion-light {
+  background-image: linear-gradient(125deg, #ffffff 0%, #eef4fb 25%, #ffffff 45%, #fef8ea 70%, #eef4fb 100%);
+  background-size: 280% 280%;
+  animation: gradient-shift 16s ease-in-out infinite;
+}
+@utility bg-motion-navy {
+  background-image: linear-gradient(125deg, #041a3d 0%, #082d65 30%, #0755a5 55%, #0c3a7d 75%, #041a3d 100%);
+  background-size: 260% 260%;
+  animation: gradient-shift 14s ease-in-out infinite;
+}
+@utility bg-motion-gold {
+  background-image: linear-gradient(125deg, #f5b82e 0%, #f8c95a 35%, #fde2a0 55%, #f5b82e 80%, #d99a12 100%);
+  background-size: 260% 260%;
+  animation: gradient-shift 10s ease-in-out infinite;
+}
+/* Card with a light moving gradient and an animated gradient border. */
+@utility card-motion {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(125deg, #ffffff 0%, #e9f1fb 30%, #ffffff 50%, #fff3d9 75%, #e9f1fb 100%) padding-box,
+    linear-gradient(125deg, #e3e8f0 0%, #9fbde3 30%, #e3e8f0 50%, #f0c868 75%, #e3e8f0 100%) border-box;
+  background-size: 280% 280%;
+  animation: gradient-shift 16s ease-in-out infinite;
+  transition:
+    box-shadow 0.3s,
+    transform 0.3s;
+  &:hover {
+    background:
+      linear-gradient(125deg, #ffffff 0%, #eef4fb 30%, #ffffff 50%, #fef8ea 75%, #eef4fb 100%) padding-box,
+      linear-gradient(125deg, #0755a5 0%, #f5b82e 35%, #0755a5 65%, #f5b82e 100%) border-box;
+    background-size: 280% 280%;
+    animation-duration: 5s;
+  }
+}
+/* Dark card variant (navy moving gradient, gold-tinted border). */
+@utility card-motion-dark {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(125deg, #041a3d 0%, #082d65 30%, #0a4c97 55%, #0c3a7d 75%, #041a3d 100%) padding-box,
+    linear-gradient(125deg, rgb(255 255 255 / 0.08), rgb(245 184 46 / 0.55), rgb(255 255 255 / 0.08), rgb(26 107 192 / 0.6)) border-box;
+  background-size: 260% 260%;
+  animation: gradient-shift 14s ease-in-out infinite;
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ---------- Gradient motion (blob mesh) ---------- */
+@keyframes gm-orbit {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg) translateX(var(--orbit)) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg) translateX(var(--orbit)) rotate(-300deg);
+  }
+}
+.gm-blob {
+  will-change: transform;
+}
+.gradient-motion[data-paused] .gm-blob {
+  animation-play-state: paused !important;
+}
+
+/* Spinning conic gradient border. Use on a wrapper with p-px / p-[2px]. */
+@property --spin {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes spin-angle {
+  to {
+    --spin: 360deg;
+  }
+}
+@utility border-conic {
+  background: conic-gradient(from var(--spin), #ff5500, #ff9900, #f5b82e, #0755a5, #082d65, #ff5500);
+  animation: spin-angle 6s linear infinite;
+}
+@utility border-conic-soft {
+  background: conic-gradient(from var(--spin), transparent 0deg, #ff9900 60deg, #0755a5 120deg, transparent 180deg, transparent 360deg);
+  animation: spin-angle 5s linear infinite;
+}
+
+/* Cursor-following spotlight (set --mx/--my from JS). */
+@utility spotlight {
+  position: relative;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgb(255 153 0 / 0.16), rgb(7 85 165 / 0.1) 45%, transparent 70%);
+  }
+  &:hover::before {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gm-blob,
+  .border-conic,
+  .border-conic-soft {
+    animation: none !important;
+  }
+  .bg-motion-light,
+  .bg-motion-navy,
+  .bg-motion-gold,
+  .card-motion,
+  .card-motion-dark,
+  .motion-orb,
+  .motion-grid,
+  .motion-line,
+  .motion-dot {
+    animation: none !important;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-5 sm:px-8;
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-xs font-semibold tracking-[0.16em] text-royal-600 uppercase;
+  }
+  .eyebrow::before {
+    content: '';
+    @apply h-px w-6 bg-gold-500;
+  }
+}
