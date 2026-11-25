@@ -22,8 +22,8 @@ import { normaliseMobile, isIndianMobile } from '../validation'
 // ---------- seed ----------
 const SERVICES: Omit<ServiceCategory, 'id' | 'display_order'>[] = [
   ['Personal Loan', 'personal-loan'], ['Business Loan', 'business-loan'], ['Home Loan', 'home-loan'],
-  ['Plot / Site Purchase Loan', 'plot-loan'], ['Car Loan', 'car-loan'], ['Commercial Vehicle Loan', 'commercial-vehicle-loan'],
-  ['Education Loan', 'education-loan'], ['Gold Loan', 'gold-loan'], ['MSME Loan', 'msme-loan'], ['Top-Up Loan', 'top-up-loan'],
+  ['Plot Loan', 'plot-loan'], ['Car Loan', 'car-loan'], ['Commercial Vehicle Loan', 'commercial-vehicle-loan'],
+  ['Education Loan', 'education-loan'], ['Gold Loan', 'gold-loan'], ['MSME Loan', 'msme-loan'], ['Top-up Loan', 'top-up-loan'],
 ].map(([name, slug]): Omit<ServiceCategory, 'id' | 'display_order'> => ({ name, slug, group: 'loan', short_description: '' }))
   .concat(
     [['Life Insurance', 'life-insurance'], ['Health Insurance', 'health-insurance'], ['Vehicle Insurance', 'vehicle-insurance'],

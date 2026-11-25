@@ -5,6 +5,29 @@ const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 /** Dev-only mock backend. `import.meta.env.DEV` is false in production builds, so the mock is never bundled. */
 export const USE_MOCK_API = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_API === 'true'
 
+/**
+ * Dev-only: endpoints that bypass the mock and hit the real backend while the rest stay mocked.
+ * Used to integrate the API one endpoint at a time. Comma-separated "METHOD /path/" entries;
+ * a path ending in `*` matches by prefix. Example: VITE_LIVE_ENDPOINTS="GET /api/services/"
+ */
+const LIVE_ENDPOINTS = USE_MOCK_API
+  ? (import.meta.env.VITE_LIVE_ENDPOINTS ?? '')
+      .split(',')
+      .map((e: string) => e.trim().split(/\s+/))
+      .filter((p: string[]) => p.length === 2)
+      .map(([m, path]: string[]) => ({ method: m.toUpperCase(), path }))
+  : []
+
+/** True when this request should go to the in-browser mock instead of the backend. */
+export function isMocked(method: string, url: string): boolean {
+  if (!USE_MOCK_API) return false
+  const path = url.split('?')[0]
+  return !LIVE_ENDPOINTS.some(
+    (e: { method: string; path: string }) =>
+      e.method === method.toUpperCase() && (e.path.endsWith('*') ? path.startsWith(e.path.slice(0, -1)) : path === e.path),
+  )
+}
+
 export interface ApiErrorShape {
   code: string
   message: string
@@ -52,7 +75,8 @@ function readCookie(name: string): string | null {
 
 /** Fetches the CSRF token once. The backend sets the `csrftoken` cookie and may also return it in the body. */
 export async function ensureCsrf(force = false): Promise<string | null> {
-  if (USE_MOCK_API) return 'mock'
+  // Only live (non-mocked) requests need a real token.
+  if (USE_MOCK_API && !LIVE_ENDPOINTS.length) return 'mock'
   if (csrfToken && !force) return csrfToken
   const res = await fetch(`${BASE_URL}/api/auth/csrf/`, { credentials: 'include' })
   try {
@@ -78,7 +102,8 @@ export function buildQuery(query?: Query): string {
 async function send(method: string, path: string, opts: RequestOptions): Promise<RawResponse> {
   const url = `${path}${buildQuery(opts.query)}`
 
-  if (USE_MOCK_API) {
+  // USE_MOCK_API first: it is a build-time false in production, so the mock import is dropped.
+  if (USE_MOCK_API && isMocked(method, url)) {
     const { handleMockRequest } = await import('../mock/server')
     return handleMockRequest(method, url, opts.body, opts.formData)
   }

@@ -117,7 +117,9 @@ export function EnquiryForm({ defaultServiceSlug, compact }: EnquiryFormProps) {
     <form onSubmit={handleSubmit((v) => mutation.mutate(v))} noValidate className="space-y-5">
       {generalError && (
         <Alert tone="error" title="We couldn't send your enquiry">
-          {mutation.error.message} Please try again{` `}in a moment.
+          {mutation.error.message}
+          {/* A throttled reply already says when to retry. */}
+          {!(mutation.error instanceof ApiError && mutation.error.code === 'throttled') && ' Please try again in a moment.'}
         </Alert>
       )}
 
@@ -128,7 +130,7 @@ export function EnquiryForm({ defaultServiceSlug, compact }: EnquiryFormProps) {
         <Field label="Mobile Number" htmlFor="enq-mobile" required error={errors.mobile?.message}>
           <div className="relative">
             <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-[15px] text-ink-500">+91</span>
-            <Input id="enq-mobile" type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={14} className="pl-12" invalid={!!errors.mobile} aria-describedby={errors.mobile ? 'enq-mobile-error' : undefined} {...register('mobile')} />
+            <Input id="enq-mobile" type="tel" inputMode="tel" autoComplete="tel-national" maxLength={20} className="pl-12" invalid={!!errors.mobile} aria-describedby={errors.mobile ? 'enq-mobile-error' : undefined} {...register('mobile')} />
           </div>
         </Field>
         <Field label="Service / Loan Type" htmlFor="enq-service" required error={errors.service_id?.message ?? (services.isError ? 'Services could not be loaded.' : undefined)}>
