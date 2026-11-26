@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Alert, EmptyState, Spinner } from '@/components/ui/Feedback'
+import { ApiError } from '@/lib/api/client'
 import { adminApi } from '@/lib/api/endpoints'
 import { LEAD_SOURCES, LEAD_STATUSES, type LeadFilters } from '@/lib/api/types'
 import { formatDate, formatMobile, todayIST } from '@/lib/format'
@@ -35,7 +36,13 @@ export default function LeadsPage() {
   const query: LeadFilters = { ...filters, page: Number(filters.page) || 1, page_size: PAGE_SIZE, ordering: filters.ordering || '-created_at' }
   const leads = useQuery({ queryKey: ['admin', 'leads', query], queryFn: () => adminApi.leads(query), placeholderData: keepPreviousData })
 
-  const activeFilterCount = (['status', 'source', 'service_id', 'employee_id', 'date_from', 'date_to', 'followup_due'] as const).filter((k) => filters[k]).length
+  // A page past the end (e.g. after leads were deleted or an old link) returns 404: go back to page 1.
+  const pageGone = leads.error instanceof ApiError && leads.error.status === 404 && query.page! > 1
+  useEffect(() => {
+    if (pageGone) setFilters({ page: '' }, false)
+  }, [pageGone, setFilters])
+
+  const activeFilterCount =(['status', 'source', 'service_id', 'employee_id', 'date_from', 'date_to', 'followup_due'] as const).filter((k) => filters[k]).length
 
   const sortBy = (field: string) => {
     const current = query.ordering ?? ''

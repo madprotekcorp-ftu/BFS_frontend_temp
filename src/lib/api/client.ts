@@ -8,24 +8,28 @@ export const USE_MOCK_API = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK
 /**
  * Dev-only: endpoints that bypass the mock and hit the real backend while the rest stay mocked.
  * Used to integrate the API one endpoint at a time. Comma-separated "METHOD /path/" entries;
- * a path ending in `*` matches by prefix. Example: VITE_LIVE_ENDPOINTS="GET /api/services/"
+ * `:id` matches one numeric segment and a trailing `*` matches any rest of the path.
+ * Example: VITE_LIVE_ENDPOINTS="GET /api/services/,GET /api/admin/leads/:id/"
  */
-const LIVE_ENDPOINTS = USE_MOCK_API
+const LIVE_ENDPOINTS: { method: string; re: RegExp }[] = USE_MOCK_API
   ? (import.meta.env.VITE_LIVE_ENDPOINTS ?? '')
       .split(',')
       .map((e: string) => e.trim().split(/\s+/))
       .filter((p: string[]) => p.length === 2)
-      .map(([m, path]: string[]) => ({ method: m.toUpperCase(), path }))
+      .map(([m, path]: string[]) => {
+        const pattern = path
+          .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+          .replace(/:id/g, '\\d+')
+          .replace(/\*$/, '.*')
+        return { method: m.toUpperCase(), re: new RegExp(`^${pattern}$`) }
+      })
   : []
 
 /** True when this request should go to the in-browser mock instead of the backend. */
 export function isMocked(method: string, url: string): boolean {
   if (!USE_MOCK_API) return false
   const path = url.split('?')[0]
-  return !LIVE_ENDPOINTS.some(
-    (e: { method: string; path: string }) =>
-      e.method === method.toUpperCase() && (e.path.endsWith('*') ? path.startsWith(e.path.slice(0, -1)) : path === e.path),
-  )
+  return !LIVE_ENDPOINTS.some((e) => e.method === method.toUpperCase() && e.re.test(path))
 }
 
 export interface ApiErrorShape {
