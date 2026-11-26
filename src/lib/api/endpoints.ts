@@ -1,4 +1,4 @@
-import { http, type Query } from './client'
+import { http, type Query, setCsrfToken } from './client'
 import type {
   AdminUser,
   BinnedDocument,
@@ -27,7 +27,12 @@ export const publicApi = {
 }
 
 export const authApi = {
-  login: (username: string, password: string) => http.post<AdminUser>('/api/auth/login/', { username, password }),
+  login: async (username: string, password: string): Promise<AdminUser> => {
+    // Login rotates the CSRF token and returns the new one; keep it for the next POST.
+    const { csrf_token, ...user } = await http.post<AdminUser & { csrf_token?: string }>('/api/auth/login/', { username, password })
+    setCsrfToken(csrf_token)
+    return user
+  },
   logout: () => http.post<null>('/api/auth/logout/'),
   me: () => http.get<AdminUser>('/api/auth/me/'),
 }

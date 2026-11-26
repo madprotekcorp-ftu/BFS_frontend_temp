@@ -73,6 +73,11 @@ function readCookie(name: string): string | null {
   return match ? decodeURIComponent(match[1]) : null
 }
 
+/** Stores a token the backend handed back directly (login rotates it and returns the new one). */
+export function setCsrfToken(token: string | null | undefined) {
+  if (token) csrfToken = token
+}
+
 /** Fetches the CSRF token once. The backend sets the `csrftoken` cookie and may also return it in the body. */
 export async function ensureCsrf(force = false): Promise<string | null> {
   // Only live (non-mocked) requests need a real token.
@@ -143,7 +148,17 @@ async function send(method: string, path: string, opts: RequestOptions): Promise
       json = undefined
     }
   }
+  // Dev-only: while auth is live but admin data is still mocked, mirror the real session
+  // into the mock's session flag so mocked admin endpoints don't answer 401.
+  if (USE_MOCK_API) syncMockSession(method, url.split('?')[0], res.status)
   return { status: res.status, headers: res.headers, json }
+}
+
+function syncMockSession(method: string, path: string, status: number) {
+  const KEY = 'bfs-mock-session' // same key as src/lib/mock/server.ts
+  const signedIn = (method === 'POST' && path === '/api/auth/login/') || (method === 'GET' && path === '/api/auth/me/')
+  if (signedIn && status === 200) localStorage.setItem(KEY, '1')
+  else if ((method === 'POST' && path === '/api/auth/logout/') || (path === '/api/auth/me/' && status === 401)) localStorage.removeItem(KEY)
 }
 
 async function request(method: string, path: string, opts: RequestOptions = {}): Promise<RawResponse> {

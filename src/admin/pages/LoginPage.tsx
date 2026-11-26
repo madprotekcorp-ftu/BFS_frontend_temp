@@ -8,7 +8,7 @@ import { Logo } from '@/components/site/Logo'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
 import { Alert } from '@/components/ui/Feedback'
-import { USE_MOCK_API } from '@/lib/api/client'
+import { isMocked, USE_MOCK_API } from '@/lib/api/client'
 import { useAuth } from '../auth'
 
 const schema = z.object({
@@ -64,7 +64,7 @@ export default function LoginPage() {
             <p className="mt-1 text-sm text-ink-500">Sign in to manage leads and enquiries.</p>
 
             {error && <Alert tone="error" className="mt-6">{error}</Alert>}
-            {USE_MOCK_API && (
+            {USE_MOCK_API && isMocked('POST', '/api/auth/login/') && (
               <Alert tone="info" className="mt-6" title="Development mock API">
                 Use <code className="font-semibold">admin</code> / <code className="font-semibold">admin123</code>. Not available in production builds.
               </Alert>

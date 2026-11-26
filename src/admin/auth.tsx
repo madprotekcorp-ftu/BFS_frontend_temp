@@ -51,6 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     try {
       await authApi.logout()
+    } catch {
+      // Already signed out (401) or offline: clear local state anyway.
     } finally {
       qc.setQueryData(ME_KEY, null)
       qc.removeQueries({ predicate: (q) => q.queryKey[0] === 'admin' })
