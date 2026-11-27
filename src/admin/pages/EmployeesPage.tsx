@@ -29,11 +29,14 @@ export default function EmployeesPage() {
     queryKey: ['admin', 'employees', 'list', { search: debounced, status }],
     queryFn: () => adminApi.employees({ search: debounced, is_active: status }),
   })
+  const rows = list.data?.data
+  const total = list.data?.pagination.total ?? 0
 
   const toggle = useMutation({
     mutationFn: (e: Employee) => adminApi.updateEmployee(e.id, { is_active: !e.is_active }),
     onSuccess: () => {
       setToggling(null)
+      qc.invalidateQueries({ queryKey: ['admin', 'leads'] })
       qc.invalidateQueries({ queryKey: ['admin', 'employees'] })
       qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] })
     },
@@ -63,7 +66,7 @@ export default function EmployeesPage() {
           <div className="flex justify-center py-16"><Spinner /></div>
         ) : list.isError ? (
           <div className="p-5"><Alert tone="error">{list.error.message}</Alert></div>
-        ) : list.data?.length === 0 ? (
+        ) : rows?.length === 0 ? (
           <EmptyState icon={<Users className="size-5" />} title={search || status ? 'No employees match' : 'No employees yet'} description="Add employees so you can assign leads to them." action={!search && !status ? <Button icon={<Plus className="size-4" />} onClick={() => setEditing('new')}>Add employee</Button> : undefined} />
         ) : (
           <div className="overflow-x-auto">
@@ -81,7 +84,7 @@ export default function EmployeesPage() {
                 </tr>
               </thead>
               <tbody>
-                {list.data?.map((e) => (
+                {rows?.map((e) => (
                   <tr key={e.id} className={clsx('border-t border-line', !e.is_active && 'bg-surface/40')}>
                     <td className="px-5 py-3 font-mono text-xs text-ink-500">{e.employee_code}</td>
                     <td className="px-3 py-3 font-medium text-ink-900">{e.name}</td>
@@ -106,6 +109,7 @@ export default function EmployeesPage() {
                 ))}
               </tbody>
             </table>
+            {rows && total > rows.length && <p className="border-t border-line px-5 py-3 text-xs text-ink-500">Showing {rows.length} of {total}. Search to narrow the list.</p>}
           </div>
         )}
       </div>
@@ -144,23 +148,29 @@ type Out = z.output<typeof schema>
 
 function EmployeeModal({ employee, open, onClose }: { employee?: Employee; open: boolean; onClose: () => void }) {
   const qc = useQueryClient()
-  const { register, handleSubmit, reset, setError, formState: { errors } } = useForm<In, unknown, Out>({ resolver: zodResolver(schema) })
+  const { register, handleSubmit, reset, setError, formState: { errors, dirtyFields } } = useForm<In, unknown, Out>({ resolver: zodResolver(schema) })
 
   useEffect(() => {
     if (open) reset(employee ? { employee_code: employee.employee_code, name: employee.name, mobile: employee.mobile, email: employee.email } : { employee_code: '', name: '', mobile: '', email: '' })
   }, [open, employee, reset])
 
   const save = useMutation({
-    mutationFn: (v: Out) => (employee ? adminApi.updateEmployee(employee.id, v) : adminApi.createEmployee({ ...v, is_active: true })),
+    // Edit is a partial PATCH: only the fields that changed.
+    mutationFn: (v: Out) =>
+      employee
+        ? adminApi.updateEmployee(employee.id, Object.fromEntries(Object.keys(dirtyFields).map((k) => [k, v[k as keyof Out]])))
+        : adminApi.createEmployee({ ...v, is_active: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'employees'] })
       onClose()
     },
     onError: (err) => {
-      if (err instanceof ApiError) for (const [f, m] of Object.entries(err.fields)) setError(f as keyof In, { message: m[0] })
+      if (err instanceof ApiError) for (const [f, m] of Object.entries(err.fields)) if (f in schema.shape) setError(f as keyof In, { message: m[0] })
     },
   })
-  const general = save.error && (!(save.error instanceof ApiError) || Object.keys(save.error.fields).length === 0)
+  // Errors with no matching input (or no field at all) go at the top.
+  const other = save.error instanceof ApiError ? Object.entries(save.error.fields).filter(([f]) => !(f in schema.shape)).flatMap(([, m]) => m) : []
+  const general = save.error && (!(save.error instanceof ApiError) || Object.keys(save.error.fields).length === 0 || other.length > 0)
 
   return (
     <Modal
@@ -168,12 +178,12 @@ function EmployeeModal({ employee, open, onClose }: { employee?: Employee; open:
       onClose={() => { save.reset(); onClose() }}
       title={employee ? 'Edit employee' : 'Add employee'}
       footer={<>
-        <Button variant="secondary" onClick={onClose}>Cancel</Button>
+        <Button variant="secondary" onClick={() => { save.reset(); onClose() }}>Cancel</Button>
         <Button type="submit" form="employee-form" loading={save.isPending}>{employee ? 'Save changes' : 'Add employee'}</Button>
       </>}
     >
-      <form id="employee-form" onSubmit={handleSubmit((v) => save.mutate(v))} noValidate className="grid gap-5 sm:grid-cols-2">
-        {general && <Alert tone="error" className="sm:col-span-2">{save.error.message}</Alert>}
+      <form id="employee-form" onSubmit={handleSubmit((v) => (employee && Object.keys(dirtyFields).length === 0 ? onClose() : save.mutate(v)))} noValidate className="grid gap-5 sm:grid-cols-2">
+        {general && <Alert tone="error" className="sm:col-span-2">{other.length ? other.join(' ') : save.error.message}</Alert>}
         <Field label="Employee ID" htmlFor="emp-code" required error={errors.employee_code?.message}>
           <Input id="emp-code" invalid={!!errors.employee_code} {...register('employee_code')} />
         </Field>

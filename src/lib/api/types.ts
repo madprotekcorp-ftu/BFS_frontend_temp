@@ -144,6 +144,8 @@ export interface Employee {
   email: string
   is_active: boolean
   lead_counts: { total: number; open: number; converted: number }
+  created_at?: string
+  updated_at?: string
 }
 
 export interface EmployeeWritePayload {

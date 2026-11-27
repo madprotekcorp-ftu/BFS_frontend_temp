@@ -49,14 +49,16 @@ export const adminApi = {
   exportLeads: (filters: LeadFilters) =>
     http.download('/api/admin/leads/export/', q({ ...filters, page: undefined, page_size: undefined }), 'bfs-leads.csv'),
 
-  remarks: (id: number) => http.get<Remark[]>(`/api/admin/leads/${id}/remarks/`),
+  remarks: (id: number, page = 1, page_size = 20) => http.page<Remark>(`/api/admin/leads/${id}/remarks/`, { page, page_size }),
   addRemark: (id: number, text: string) => http.post<Remark>(`/api/admin/leads/${id}/remarks/`, { text }),
 
   assign: (id: number, employee_id: number | null, note?: string) =>
     http.post<LeadDetail>(`/api/admin/leads/${id}/assign/`, { employee_id, note }),
   assignments: (id: number) => http.get<Assignment[]>(`/api/admin/leads/${id}/assignments/`),
 
-  employees: (query: Query = {}) => http.get<Employee[]>('/api/admin/employees/', query),
+  // Paginated (default 20, max 100), sorted by name.
+  employees: (query: Query = {}) => http.page<Employee>('/api/admin/employees/', { page_size: 100, ...query }),
+  employee: (id: number) => http.get<Employee>(`/api/admin/employees/${id}/`),
   createEmployee: (payload: EmployeeWritePayload) => http.post<Employee>('/api/admin/employees/', payload),
   updateEmployee: (id: number, payload: Partial<EmployeeWritePayload>) =>
     http.patch<Employee>(`/api/admin/employees/${id}/`, payload),

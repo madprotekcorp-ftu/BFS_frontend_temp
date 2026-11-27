@@ -47,7 +47,7 @@ export function LeadFormModal({ open, onClose, lead, onSaved }: Props) {
   // Field errors the form has no input for (e.g. non_field_errors) are shown at the top.
   const [otherErrors, setOtherErrors] = useState<string[]>([])
 
-  const { register, handleSubmit, reset, setError, formState: { errors } } = useForm<In, unknown, Out>({ resolver: zodResolver(schema) })
+  const { register, handleSubmit, reset, setError, formState: { errors, dirtyFields } } = useForm<In, unknown, Out>({ resolver: zodResolver(schema) })
 
   useEffect(() => {
     if (!open) return
@@ -72,9 +72,11 @@ export function LeadFormModal({ open, onClose, lead, onSaved }: Props) {
   }, [open, lead, reset])
 
   const mutation = useMutation({
-    mutationFn: (payload: LeadWritePayload) => (editing ? adminApi.updateLead(lead.id, payload) : adminApi.createLead(payload)),
+    mutationFn: (payload: LeadWritePayload) => (editing ? adminApi.updateLead(lead!.id, payload) : adminApi.createLead(payload)),
     onSuccess: (saved) => {
-      qc.invalidateQueries({ queryKey: ['admin'] })
+      // PATCH/POST return the full lead detail: use it as the detail state.
+      qc.setQueryData(['admin', 'lead', saved.id], saved)
+      qc.invalidateQueries({ queryKey: ['admin'], predicate: (q) => !(q.queryKey[1] === 'lead' && q.queryKey[2] === saved.id) })
       onSaved?.(saved)
       onClose()
     },
@@ -84,9 +86,11 @@ export function LeadFormModal({ open, onClose, lead, onSaved }: Props) {
           setDuplicate({ id: err.details.existing_lead_id as number | undefined, code: err.details.existing_lead_code as string | undefined, payload })
           return
         }
+        // Only inputs that are on screen can show their own error.
+        const shown = new Set(Object.keys(schema.shape).filter((k) => !(editing && (k === 'assigned_employee_id' || k === 'consent'))))
         const other: string[] = []
         for (const [f, m] of Object.entries(err.fields)) {
-          if (f in schema.shape) setError(f as keyof In, { message: m[0] })
+          if (shown.has(f)) setError(f as keyof In, { message: m[0] })
           else other.push(...m)
         }
         setOtherErrors(other)
@@ -96,7 +100,7 @@ export function LeadFormModal({ open, onClose, lead, onSaved }: Props) {
 
   const submit = (v: Out) => {
     setOtherErrors([])
-    const payload: LeadWritePayload = {
+    const full: LeadWritePayload = {
       customer_name: v.customer_name,
       mobile: v.mobile,
       service_id: Number(v.service_id),
@@ -107,9 +111,19 @@ export function LeadFormModal({ open, onClose, lead, onSaved }: Props) {
       status: v.status as LeadWritePayload['status'],
       next_followup_date: v.next_followup_date || null,
     }
-    if (!editing || lead.source.code !== 'website') payload.source = v.source as LeadWritePayload['source']
-    if (!editing && v.assigned_employee_id) payload.assigned_employee_id = Number(v.assigned_employee_id)
-    if (!editing) payload.consent = !!v.consent
+    if (editing) {
+      // PATCH is partial: send only the fields the user changed.
+      const payload: Partial<LeadWritePayload> = {}
+      for (const k of Object.keys(dirtyFields) as (keyof In)[]) {
+        if (k === 'source') { if (lead.source.code !== 'website') payload.source = v.source as LeadWritePayload['source'] }
+        else if (k in full) (payload as Record<string, unknown>)[k] = full[k as keyof LeadWritePayload]
+      }
+      if (Object.keys(payload).length === 0) return onClose()
+      mutation.mutate(payload as LeadWritePayload)
+      return
+    }
+    const payload: LeadWritePayload = { ...full, source: v.source as LeadWritePayload['source'], consent: !!v.consent }
+    if (v.assigned_employee_id) payload.assigned_employee_id = Number(v.assigned_employee_id)
     mutation.mutate(payload)
   }
 

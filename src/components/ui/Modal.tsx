@@ -18,10 +18,15 @@ export function Modal({ open, onClose, title, description, children, footer, siz
   const titleId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
 
+  // Read onClose through a ref so a new callback each render doesn't re-run the
+  // open effect (which would move focus back to the first input while typing).
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose })
+
   useEffect(() => {
     if (!open) return
     const prev = document.activeElement as HTMLElement | null
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCloseRef.current()
     document.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
     requestAnimationFrame(() => {
@@ -32,7 +37,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
       document.body.style.overflow = ''
       prev?.focus()
     }
-  }, [open, onClose])
+  }, [open])
 
   return createPortal(
     <AnimatePresence>

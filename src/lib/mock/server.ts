@@ -371,7 +371,7 @@ export async function handleMockRequest(method: string, url: string, body?: unkn
     if (method === 'PATCH') {
       const fields = validateLead(db, b, true)
       if (Object.keys(fields).length) return fail(400, 'validation_error', 'Please correct the highlighted fields.', fields)
-      if ('source' in b && (b.source === 'website') !== (lead.source === 'website')) return fail(400, 'validation_error', 'Website source cannot be changed.', { source: ['Website source cannot be changed.'] })
+      if ('source' in b && (b.source === 'website') !== (lead.source === 'website')) return fail(400, 'validation_error', 'Please correct the highlighted fields.', { source: ['Source cannot be changed to or from Website.'] })
       for (const k of ['customer_name', 'location', 'loan_amount', 'occupation', 'message', 'source', 'status', 'next_followup_date', 'last_followup_date'] as const) if (k in b) (lead as unknown as Record<string, unknown>)[k] = b[k]
       if ('mobile' in b) lead.mobile = normaliseMobile(String(b.mobile))
       if ('service_id' in b) lead.service_id = Number(b.service_id)

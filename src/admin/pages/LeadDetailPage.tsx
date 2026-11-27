@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { type InfiniteData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { clsx } from 'clsx'
 import { AlertTriangle, ArrowLeft, ArrowRightLeft, MessageSquarePlus, Pencil, Phone, Trash2, UserPlus } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -153,7 +153,13 @@ function StatusCard({ lead }: { lead: LeadDetail }) {
 
   const dirty = status !== lead.status.code || next !== (lead.next_followup_date ?? '') || last !== (lead.last_followup_date ?? '')
   const save = useMutation({
-    mutationFn: () => adminApi.updateLead(lead.id, { status, next_followup_date: next || null, last_followup_date: last || null }),
+    // Partial update: only the fields that changed.
+    mutationFn: () =>
+      adminApi.updateLead(lead.id, {
+        ...(status !== lead.status.code && { status }),
+        ...(next !== (lead.next_followup_date ?? '') && { next_followup_date: next || null }),
+        ...(last !== (lead.last_followup_date ?? '') && { last_followup_date: last || null }),
+      }),
     onSuccess: (updated) => {
       qc.setQueryData(['admin', 'lead', lead.id], updated)
       qc.invalidateQueries({ queryKey: ['admin', 'leads'] })
@@ -187,7 +193,11 @@ function StatusCard({ lead }: { lead: LeadDetail }) {
             <Input id="sc-next" type="date" value={next} onChange={(e) => setNext(e.target.value)} />
           </Field>
         </div>
-        {save.isError && <Alert tone="error">{save.error.message}</Alert>}
+        {save.isError && (
+          <Alert tone="error">
+            {save.error instanceof ApiError && Object.keys(save.error.fields).length ? Object.values(save.error.fields).flat().join(' ') : save.error.message}
+          </Alert>
+        )}
         <div className="flex items-center gap-3">
           <Button className="flex-1" disabled={!dirty} loading={save.isPending} onClick={() => save.mutate()}>Update</Button>
           {saved && <span role="status" className="text-sm font-medium text-emerald-700">Saved</span>}
@@ -293,35 +303,68 @@ function AssignmentCard({ lead }: { lead: LeadDetail }) {
 
 function RemarksCard({ leadId }: { leadId: number }) {
   const qc = useQueryClient()
-  const remarks = useQuery({ queryKey: ['admin', 'remarks', leadId], queryFn: () => adminApi.remarks(leadId) })
+  const key = ['admin', 'remarks', leadId]
+  // Paginated, newest first. "Load more" fetches the next page.
+  const remarks = useInfiniteQuery({
+    queryKey: key,
+    queryFn: ({ pageParam }) => adminApi.remarks(leadId, pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.pagination.page < last.pagination.total_pages ? last.pagination.page + 1 : undefined),
+  })
   const [text, setText] = useState('')
   const add = useMutation({
     mutationFn: () => adminApi.addRemark(leadId, text.trim()),
-    onSuccess: () => {
+    onSuccess: (remark) => {
       setText('')
-      qc.invalidateQueries({ queryKey: ['admin', 'remarks', leadId] })
+      // Put the new remark on top and bump the counts without a refetch.
+      qc.setQueryData<InfiniteData<Awaited<ReturnType<typeof adminApi.remarks>>>>(key, (d) =>
+        d && {
+          ...d,
+          pages: d.pages.map((pg, i) => ({
+            ...pg,
+            data: i === 0 ? [remark, ...pg.data] : pg.data,
+            pagination: { ...pg.pagination, total: pg.pagination.total + 1 },
+          })),
+        },
+      )
+      qc.setQueryData<LeadDetail>(['admin', 'lead', leadId], (l) => l && { ...l, remark_count: l.remark_count + 1 })
     },
   })
 
+  // A remark added before "load more" shifts the pages by one, so drop repeats.
+  const seen = new Set<number>()
+  const list = (remarks.data?.pages.flatMap((pg) => pg.data) ?? []).filter((r) => !seen.has(r.id) && !!seen.add(r.id))
+  const total = remarks.data?.pages[0]?.pagination.total
+  const addError = add.error instanceof ApiError && add.error.fields.text?.length ? add.error.fields.text.join(' ') : add.error?.message
+
   return (
-    <Card title="Internal remarks">
+    <Card title={total ? `Internal remarks (${total})` : 'Internal remarks'}>
       <form onSubmit={(e) => { e.preventDefault(); if (text.trim()) add.mutate() }} className="space-y-3">
         <Textarea aria-label="New remark" rows={3} maxLength={2000} placeholder="Add a note about a call, a document request or the next step…" value={text} onChange={(e) => setText(e.target.value)} />
-        {add.isError && <Alert tone="error">{add.error.message}</Alert>}
+        {add.isError && <Alert tone="error">{addError}</Alert>}
         <div className="flex justify-end">
           <Button type="submit" size="sm" disabled={!text.trim()} loading={add.isPending} icon={<MessageSquarePlus className="size-4" />}>Add remark</Button>
         </div>
       </form>
       <div className="mt-5">
-        {remarks.isLoading ? <Spinner /> : remarks.data?.length ? (
-          <ul className="space-y-3">
-            {remarks.data.map((r) => (
-              <li key={r.id} className="rounded-lg border border-line p-3.5">
-                <p className="text-sm whitespace-pre-line text-ink-900">{r.text}</p>
-                <p className="mt-2 text-xs text-ink-500">{r.created_by.name} · {formatDateTime(r.created_at)}</p>
-              </li>
-            ))}
-          </ul>
+        {remarks.isLoading ? <Spinner /> : remarks.isError ? <Alert tone="error">{remarks.error.message}</Alert> : list.length ? (
+          <>
+            <ul className="space-y-3">
+              {list.map((r) => (
+                <li key={r.id} className="rounded-lg border border-line p-3.5">
+                  <p className="text-sm whitespace-pre-line text-ink-900">{r.text}</p>
+                  <p className="mt-2 text-xs text-ink-500">{r.created_by.name} · {formatDateTime(r.created_at)}</p>
+                </li>
+              ))}
+            </ul>
+            {remarks.hasNextPage && (
+              <div className="mt-4 flex justify-center">
+                <Button variant="secondary" size="sm" loading={remarks.isFetchingNextPage} onClick={() => remarks.fetchNextPage()}>
+                  Load more{total ? ` (${list.length} of ${total})` : ''}
+                </Button>
+              </div>
+            )}
+          </>
         ) : <p className="text-sm text-ink-400">No remarks yet.</p>}
       </div>
     </Card>
