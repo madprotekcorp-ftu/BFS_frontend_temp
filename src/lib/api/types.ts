@@ -116,6 +116,8 @@ export interface LeadWritePayload {
   next_followup_date?: string | null
   last_followup_date?: string | null
   allow_duplicate?: boolean
+  /** Create only: true records consent_at on the server. */
+  consent?: boolean
 }
 
 export interface Remark {

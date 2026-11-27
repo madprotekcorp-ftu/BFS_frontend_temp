@@ -26,6 +26,7 @@ const schema = z.object({
   status: z.string().min(1),
   assigned_employee_id: z.string().optional(),
   next_followup_date: z.string().optional(),
+  consent: z.boolean().optional(),
 })
 type In = z.input<typeof schema>
 type Out = z.output<typeof schema>
@@ -42,13 +43,16 @@ export function LeadFormModal({ open, onClose, lead, onSaved }: Props) {
   const qc = useQueryClient()
   const services = useServiceOptions()
   const employees = useEmployees(true)
-  const [duplicate, setDuplicate] = useState<{ id?: number; payload: LeadWritePayload } | null>(null)
+  const [duplicate, setDuplicate] = useState<{ id?: number; code?: string; payload: LeadWritePayload } | null>(null)
+  // Field errors the form has no input for (e.g. non_field_errors) are shown at the top.
+  const [otherErrors, setOtherErrors] = useState<string[]>([])
 
   const { register, handleSubmit, reset, setError, formState: { errors } } = useForm<In, unknown, Out>({ resolver: zodResolver(schema) })
 
   useEffect(() => {
     if (!open) return
     setDuplicate(null)
+    setOtherErrors([])
     reset(
       lead
         ? {
@@ -63,7 +67,7 @@ export function LeadFormModal({ open, onClose, lead, onSaved }: Props) {
             status: lead.status.code,
             next_followup_date: lead.next_followup_date ?? '',
           }
-        : { source: 'phone', status: 'new', assigned_employee_id: '', next_followup_date: '' },
+        : { source: 'phone', status: 'new', assigned_employee_id: '', next_followup_date: '', consent: false },
     )
   }, [open, lead, reset])
 
@@ -77,15 +81,21 @@ export function LeadFormModal({ open, onClose, lead, onSaved }: Props) {
     onError: (err, payload) => {
       if (err instanceof ApiError) {
         if (err.code === 'duplicate_mobile') {
-          setDuplicate({ id: err.details.existing_lead_id as number | undefined, payload })
+          setDuplicate({ id: err.details.existing_lead_id as number | undefined, code: err.details.existing_lead_code as string | undefined, payload })
           return
         }
-        for (const [f, m] of Object.entries(err.fields)) setError(f as keyof In, { message: m[0] })
+        const other: string[] = []
+        for (const [f, m] of Object.entries(err.fields)) {
+          if (f in schema.shape) setError(f as keyof In, { message: m[0] })
+          else other.push(...m)
+        }
+        setOtherErrors(other)
       }
     },
   })
 
   const submit = (v: Out) => {
+    setOtherErrors([])
     const payload: LeadWritePayload = {
       customer_name: v.customer_name,
       mobile: v.mobile,
@@ -99,6 +109,7 @@ export function LeadFormModal({ open, onClose, lead, onSaved }: Props) {
     }
     if (!editing || lead.source.code !== 'website') payload.source = v.source as LeadWritePayload['source']
     if (!editing && v.assigned_employee_id) payload.assigned_employee_id = Number(v.assigned_employee_id)
+    if (!editing) payload.consent = !!v.consent
     mutation.mutate(payload)
   }
 
@@ -128,12 +139,13 @@ export function LeadFormModal({ open, onClose, lead, onSaved }: Props) {
     >
       {duplicate ? (
         <Alert tone="info" title="A lead with this mobile number already exists">
-          {duplicate.id && <p>See <Link to={`/admin/leads/${duplicate.id}`} className="font-semibold underline" onClick={onClose}>the existing lead</Link> before creating a duplicate.</p>}
+          {duplicate.id && <p>See <Link to={`/admin/leads/${duplicate.id}`} className="font-semibold underline" onClick={onClose}>{duplicate.code ? `the existing lead ${duplicate.code}` : 'the existing lead'}</Link> before creating a duplicate.</p>}
           <p className="mt-1">Create a separate lead only if this is a genuinely new requirement.</p>
         </Alert>
       ) : (
         <form id="lead-form" onSubmit={handleSubmit(submit)} noValidate className="space-y-5">
           {generalError && <Alert tone="error">{mutation.error.message}</Alert>}
+          {otherErrors.length > 0 && <Alert tone="error">{otherErrors.join(' ')}</Alert>}
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Customer Name" htmlFor="lf-name" required error={errors.customer_name?.message}>
               <Input id="lf-name" invalid={!!errors.customer_name} {...register('customer_name')} />
@@ -181,6 +193,12 @@ export function LeadFormModal({ open, onClose, lead, onSaved }: Props) {
           <Field label="Message / Requirement" htmlFor="lf-message" error={errors.message?.message}>
             <Textarea id="lf-message" rows={3} {...register('message')} />
           </Field>
+          {!editing && (
+            <label className="flex items-start gap-2.5 text-sm text-ink-700">
+              <input type="checkbox" className="mt-0.5 size-4 accent-navy-900" {...register('consent')} />
+              <span>The customer agreed to be contacted about this enquiry <span className="text-ink-400">(recorded with the date and time)</span></span>
+            </label>
+          )}
         </form>
       )}
     </Modal>
