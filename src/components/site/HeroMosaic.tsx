@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion'
-import { Car, Gem, Home, Briefcase, type LucideIcon } from 'lucide-react'
+import { Car, UserRound, Home, Briefcase, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { GradientMotion, type GradientPalette } from '@/components/ui/GradientMotion'
@@ -32,7 +32,7 @@ const TILES: Tile[] = [
   { kind: 'shape', shape: 'circle', color: 'var(--color-gold-500)' },
   { kind: 'shape', shape: 'qtr-tl', color: 'var(--color-royal-100)' },
   { kind: 'feature', shape: 'square', palette: 'ember', icon: Briefcase, label: 'Business Loan', to: '/services/business-loan' },
-  { kind: 'feature', shape: 'qtr-tr', palette: 'gold', icon: Gem, label: 'Gold Loan', to: '/services/gold-loan' },
+  { kind: 'feature', shape: 'qtr-tr', palette: 'gold', icon: UserRound, label: 'Personal Loan', to: '/services/personal-loan' },
   { kind: 'shape', shape: 'square', color: 'var(--color-navy-900)' },
   { kind: 'shape', shape: 'qtr-tl', color: 'var(--color-gold-100)' },
   { kind: 'shape', shape: 'qtr-bl', color: 'var(--color-royal-100)' },
