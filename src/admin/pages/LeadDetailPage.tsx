@@ -210,7 +210,7 @@ function StatusCard({ lead }: { lead: LeadDetail }) {
 function AssignmentCard({ lead }: { lead: LeadDetail }) {
   const qc = useQueryClient()
   const employees = useEmployees(true)
-  const history = useQuery({ queryKey: ['admin', 'assignments', lead.id], queryFn: () => adminApi.assignments(lead.id) })
+  const history = useQuery({ queryKey: ['admin', 'assignments', lead.id], queryFn: () => adminApi.assignments(lead.id).then((r) => r.data) })
   const [selected, setSelected] = useState('')
   const [note, setNote] = useState('')
   const [confirming, setConfirming] = useState(false)
@@ -267,7 +267,7 @@ function AssignmentCard({ lead }: { lead: LeadDetail }) {
                   {h.previous_employee ? <>{h.previous_employee.name} → </> : null}
                   <span className="font-semibold">{h.new_employee?.name ?? 'Unassigned'}</span>
                 </p>
-                <p className="text-xs text-ink-500">{formatDateTime(h.assigned_at)} · by {h.assigned_by.name}</p>
+                <p className="text-xs text-ink-500">{formatDateTime(h.assigned_at)} {h.assigned_by && <> · by {h.assigned_by.name}</>}</p>
                 {h.note && <p className="mt-0.5 text-xs text-ink-700 italic">“{h.note}”</p>}
               </li>
             ))}
@@ -295,7 +295,11 @@ function AssignmentCard({ lead }: { lead: LeadDetail }) {
         <Field label="Note" htmlFor="assign-note" className="mt-4" hint="For example, the reason for a transfer.">
           <Input id="assign-note" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
-        {assign.isError && <Alert tone="error" className="mt-4">{assign.error.message}</Alert>}
+        {assign.isError && (
+          <Alert tone="error" className="mt-4">
+            {assign.error instanceof ApiError && Object.keys(assign.error.fields).length ? Object.values(assign.error.fields).flat().join(' ') : assign.error.message}
+          </Alert>
+        )}
       </Modal>
     </Card>
   )

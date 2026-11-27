@@ -54,7 +54,8 @@ export const adminApi = {
 
   assign: (id: number, employee_id: number | null, note?: string) =>
     http.post<LeadDetail>(`/api/admin/leads/${id}/assign/`, { employee_id, note }),
-  assignments: (id: number) => http.get<Assignment[]>(`/api/admin/leads/${id}/assignments/`),
+  // Paginated, newest first. One page of 100 covers any real history.
+  assignments: (id: number) => http.page<Assignment>(`/api/admin/leads/${id}/assignments/`, { page_size: 100 }),
 
   // Paginated (default 20, max 100), sorted by name.
   employees: (query: Query = {}) => http.page<Employee>('/api/admin/employees/', { page_size: 100, ...query }),

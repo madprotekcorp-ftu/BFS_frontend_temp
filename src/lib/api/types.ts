@@ -131,7 +131,7 @@ export interface Assignment {
   id: number
   previous_employee: Ref | null
   new_employee: Ref | null
-  assigned_by: Ref
+  assigned_by: Ref | null
   assigned_at: string
   note: string
 }
