@@ -6,7 +6,8 @@ import { Link } from 'react-router-dom'
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Alert, EmptyState, PageLoader } from '@/components/ui/Feedback'
 import { adminApi } from '@/lib/api/endpoints'
-import { LEAD_SOURCES, LEAD_STATUSES, type LeadListItem } from '@/lib/api/types'
+import { ApiError } from '@/lib/api/client'
+import { type DashboardData, LEAD_SOURCES, LEAD_STATUSES, type LeadListItem } from '@/lib/api/types'
 import { formatDate, formatMobile, formatNumber, todayIST } from '@/lib/format'
 import { Card, filterControl, PageHeader, STATUS_STYLES, StatusBadge } from '../components/ui'
 import { useUrlFilters } from '../hooks'
@@ -62,7 +63,9 @@ export default function DashboardPage() {
       {q.isLoading ? (
         <PageLoader />
       ) : q.isError ? (
-        <Alert tone="error" title="Dashboard could not be loaded" action={<button className="font-semibold underline" onClick={() => q.refetch()}>Retry</button>}>{q.error.message}</Alert>
+        <Alert tone="error" title="Dashboard could not be loaded" action={<button className="font-semibold underline" onClick={() => q.refetch()}>Retry</button>}>
+          {q.error instanceof ApiError && Object.keys(q.error.fields).length ? Object.values(q.error.fields).flat().join(' ') : q.error.message}
+        </Alert>
       ) : q.data ? (
         <div className={clsx('space-y-6 transition-opacity', q.isFetching && 'opacity-60')}>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -77,7 +80,7 @@ export default function DashboardPage() {
               <DistributionChart data={q.data.status_distribution.map((s) => ({ ...s, color: STATUS_STYLES[s.code]?.color ?? '#0755A5' }))} />
             </Card>
             <Card title="Lead source distribution">
-              <DistributionChart data={q.data.source_distribution.filter((s) => s.count > 0).map((s) => ({ ...s, color: '#0755A5' }))} />
+              <DistributionChart data={q.data.source_distribution.map((s) => ({ ...s, color: '#0755A5' }))} />
             </Card>
           </div>
 
@@ -197,7 +200,7 @@ function FollowupList({ leads }: { leads: LeadListItem[] }) {
   )
 }
 
-function EmployeeCounts({ data, unassigned, leadsLink }: { data: { employee_id: number; name: string; total: number; open: number; converted: number }[]; unassigned: number; leadsLink: (x: Record<string, string>) => string }) {
+function EmployeeCounts({ data, unassigned, leadsLink }: { data: DashboardData['employee_counts']; unassigned: number; leadsLink: (x: Record<string, string>) => string }) {
   const max = Math.max(1, ...data.map((d) => d.total), unassigned)
   if (data.length === 0 && unassigned === 0) return <EmptyState title="No assignments yet" description="Add employees and assign leads to see counts here." />
   return (
@@ -214,7 +217,9 @@ function EmployeeCounts({ data, unassigned, leadsLink }: { data: { employee_id: 
         <tbody>
           {data.map((e) => (
             <tr key={e.employee_id} className="border-b border-line last:border-0">
-              <td className="px-5 py-3"><Link to={leadsLink({ employee_id: String(e.employee_id) })} className="font-medium text-ink-900 hover:text-royal-600">{e.name}</Link></td>
+              <td className="px-5 py-3"><Link to={leadsLink({ employee_id: String(e.employee_id) })} className="font-medium text-ink-900 hover:text-royal-600">{e.name}</Link>
+                {e.is_active === false && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-500/20 ring-inset">Inactive</span>}
+              </td>
               <td className="px-3 py-3">
                 <div className="flex items-center gap-3">
                   <div className="h-2 flex-1 rounded-full bg-surface"><div className="h-full rounded-full bg-royal-600" style={{ width: `${(e.total / max) * 100}%` }} /></div>

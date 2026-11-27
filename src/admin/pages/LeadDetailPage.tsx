@@ -229,6 +229,8 @@ function AssignmentCard({ lead }: { lead: LeadDetail }) {
     },
   })
 
+  // A cancelled dialog must not carry its note into the next assignment.
+  const closeConfirm = () => { setConfirming(false); setNote(''); assign.reset() }
   const target = employees.data?.find((e) => String(e.id) === selected)
   const isTransfer = !!lead.assigned_employee
 
@@ -277,11 +279,11 @@ function AssignmentCard({ lead }: { lead: LeadDetail }) {
 
       <Modal
         open={confirming}
-        onClose={() => { setConfirming(false); assign.reset() }}
+        onClose={closeConfirm}
         size="sm"
         title={selected === 'none' ? 'Remove assignment?' : isTransfer ? 'Confirm transfer' : 'Confirm assignment'}
         footer={<>
-          <Button variant="secondary" onClick={() => setConfirming(false)}>Cancel</Button>
+          <Button variant="secondary" onClick={closeConfirm}>Cancel</Button>
           <Button loading={assign.isPending} onClick={() => assign.mutate()}>Confirm</Button>
         </>}
       >

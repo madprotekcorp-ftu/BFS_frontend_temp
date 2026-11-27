@@ -171,7 +171,8 @@ export interface DashboardData {
   }
   status_distribution: CountItem<LeadStatusCode>[]
   source_distribution: CountItem<LeadSourceCode>[]
-  employee_counts: { employee_id: number; name: string; total: number; open: number; converted: number }[]
+  /** Active employees, plus inactive ones while they still hold leads. */
+  employee_counts: { employee_id: number; name: string; is_active?: boolean; total: number; open: number; converted: number }[]
   unassigned_count: number
   recent_leads: LeadListItem[]
   upcoming_followups: LeadListItem[]
